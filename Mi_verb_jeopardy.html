@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Μι-Verb Confidence Jeopardy</title>
+
+  <!-- Google Fonts: Gentium Plus for crisp polytonic Greek & Inter for UI chrome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gentium+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slateBg: '#0f172a',
+            royalTile: '#1e3a8a',
+            goldAccent: '#f59e0b',
+            goldBright: '#fbbf24',
+            warmCream: '#fffbeb'
+          },
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+            greek: ['"Gentium Plus"', 'Georgia', 'serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Projector-Friendly High-Contrast Theme */
+    body {
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 60%, #090f1f 100%);
+      color: #fffbeb;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Polytonic Greek Typography Helpers */
+    .greek-light {
+      font-family: 'Gentium Plus', Georgia, serif;
+      font-size: 1.18em;
+      letter-spacing: 0.015em;
+      line-height: 1.25;
+      color: #1e3a8a;
+      font-weight: 700;
+    }
+
+    .greek-dark {
+      font-family: 'Gentium Plus', Georgia, serif;
+      font-size: 1.16em;
+      letter-spacing: 0.015em;
+      line-height: 1.25;
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    .greek-inline {
+      font-family: 'Gentium Plus', Georgia, serif;
+      font-size: 1.15em;
+      letter-spacing: 0.015em;
+    }
+
+    /* Royal Blue Jeopardy Tiles with Gold Hover Glow */
+    .jeopardy-tile {
+      background: linear-gradient(155deg, #2546a8 0%, #1e3a8a 100%);
+      border: 2px solid rgba(251, 191, 36, 0.45);
+      box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.16s ease,
+                  border-color 0.16s ease,
+                  background 0.16s ease;
+    }
+
+    .jeopardy-tile:hover:not(.tile-answered) {
+      transform: translateY(-3px) scale(1.018);
+      border-color: #fbbf24;
+      background: linear-gradient(155deg, #2b52c4 0%, #1d4ed8 100%);
+      box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.65), 0 0 24px rgba(245, 158, 11, 0.42);
+    }
+
+    .jeopardy-tile:active:not(.tile-answered) {
+      transform: translateY(0) scale(0.99);
+    }
+
+    .tile-answered {
+      background: rgba(15, 23, 42, 0.68);
+      border: 2px dashed rgba(251, 191, 36, 0.25);
+      box-shadow: none;
+    }
+
+    .tile-answered:hover {
+      border-color: rgba(251, 191, 36, 0.6);
+      background: rgba(30, 58, 138, 0.42);
+    }
+
+    /* Smooth Modal & Reveal Animations */
+    @keyframes modalPop {
+      0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes revealSlide {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-modal {
+      animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-reveal {
+      animation: revealSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Confetti Canvas Overlay */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #f59e0b;
+    }
+
+    /* Clean Printable Styling for Teacher Answer Key */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      header,
+      main,
+      #completion-banner,
+      #confetti-canvas,
+      #question-modal,
+      #cheatsheet-modal,
+      #reset-modal,
+      .no-print {
+        display: none !important;
+      }
+      #answerkey-modal {
+        position: static !important;
+        display: block !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      #answerkey-card {
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        overflow: visible !important;
+      }
+      .print-break-avoid {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col selection:bg-amber-400/30 selection:text-amber-200">
+
+  <!-- Confetti Overlay for 20/20 Completion -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="shrink-0 bg-slate-950/90 backdrop-blur-md border-b border-amber-400/30 shadow-lg z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand / Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 flex items-center justify-center font-greek font-bold text-2xl shadow-md select-none">
+          μι
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight text-warmCream leading-tight">
+            <span class="greek-inline text-amber-400">Μι</span>-Verb Confidence Jeopardy
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-300 font-medium">Collaborative Classroom Review • Koine Greek</p>
+        </div>
+      </div>
+
+      <!-- Progress Counter & Classroom Controls -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div id="progress-counter" class="px-3.5 py-2 rounded-xl bg-slate-800 border border-amber-400/45 text-amber-300 text-xs sm:text-sm font-extrabold tracking-wide shadow-sm">
+          0 / 20 Answered
+        </div>
+
+        <button onclick="openCheatSheet()" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/50 text-amber-200 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
+          <span>📖</span><span>Cheat Sheet</span>
+        </button>
+
+        <button onclick="openAnswerKey()" class="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/50 text-emerald-200 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
+          <span>🔑</span><span>Answer Key</span>
+        </button>
+
+        <button id="sound-toggle-btn" onclick="toggleSound()" title="Toggle Sound Effects" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-warmCream text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
+          <span id="sound-icon">🔊</span><span id="sound-label">Sound On</span>
+        </button>
+
+        <button onclick="openResetModal()" title="Reset Board" class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/45 text-rose-200 text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
+          <span>↺</span><span>Reset Board</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== COMPLETION CELEBRATION BANNER ==================== -->
+  <div id="completion-banner" class="hidden shrink-0 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500 text-slate-950 px-4 py-2.5 text-center shadow-lg animate-reveal z-20">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-3 font-extrabold text-sm sm:text-base">
+      <span>🎉 All 20 Questions Completed! Great job mastering <span class="greek-inline">μι</span> verbs! 🎉</span>
+      <button onclick="launchConfetti()" class="px-3 py-1 rounded-lg bg-slate-900 text-amber-300 hover:bg-slate-800 text-xs font-bold transition cursor-pointer">
+        🎊 Confetti Again
+      </button>
+      <button onclick="openResetModal()" class="px-3 py-1 rounded-lg bg-warmCream text-slate-950 hover:bg-white text-xs font-bold transition cursor-pointer">
+        ↺ Reset Board
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN 5×4 JEOPARDY BOARD ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-5 flex flex-col min-h-0">
+    <div class="flex-1 overflow-x-auto flex flex-col min-h-0">
+      <div id="jeopardy-board" class="grid grid-cols-5 grid-rows-[auto_repeat(4,minmax(0,1fr))] gap-2.5 sm:gap-3.5 min-w-[760px] flex-1">
+        <!-- Populated dynamically by JavaScript -->
+      </div>
+    </div>
+    <p class="mt-2.5 text-center text-xs text-slate-400 font-medium shrink-0">
+      Click any tile to open • Press <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-amber-300 font-bold">Space</kbd> or <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-amber-300 font-bold">Enter</kbd> to reveal the answer • <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-amber-300 font-bold">Esc</kbd> to close
+    </p>
+  </main>
+
+  <!-- ==================== QUESTION MODAL (WARM CREAM HIGH-CONTRAST) ==================== -->
+  <div id="question-modal" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-question-text">
+    <div class="bg-warmCream text-slate-950 border-4 border-amber-400 rounded-3xl max-w-4xl w-full p-6 sm:p-9 shadow-2xl animate-modal my-auto max-h-[92vh] overflow-y-auto">
+
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between gap-3 pb-4 mb-6 border-b-2 border-amber-200/80">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <span id="modal-category" class="px-4 py-1.5 rounded-full bg-royalTile text-amber-300 text-xs sm:text-sm font-extrabold uppercase tracking-wider shadow-sm"></span>
+          <span id="modal-value" class="px-4 py-1.5 rounded-full bg-amber-200 text-slate-950 border border-amber-400 text-xs sm:text-sm font-black"></span>
+          <span id="modal-answered-badge" class="hidden px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold uppercase tracking-wider">✓ Answered</span>
+        </div>
+        <button onclick="closeQuestionModal()" class="w-10 h-10 rounded-full bg-amber-100 hover:bg-amber-200 text-slate-900 flex items-center justify-center font-black text-lg transition cursor-pointer" aria-label="Close modal">
+          ✕
+        </button>
+      </div>
+
+      <!-- Large Question Text -->
+      <div id="modal-question-text" class="text-2xl sm:text-3xl md:text-[2.1rem] font-extrabold text-slate-950 leading-snug mb-6"></div>
+
+      <!-- Toggleable Hint Box -->
+      <div id="modal-hint-box" class="hidden mb-6 p-4 sm:p-5 rounded-2xl bg-sky-50 border-2 border-sky-200 text-sky-950 animate-reveal">
+        <div class="text-xs font-black uppercase tracking-widest text-sky-700 mb-1">💡 Hint</div>
+        <div id="modal-hint-text" class="text-lg sm:text-xl font-semibold leading-snug"></div>
+      </div>
+
+      <!-- Hint & Reveal Controls -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <button id="btn-toggle-hint" onclick="toggleHint()" class="px-5 py-3 rounded-xl bg-sky-100 hover:bg-sky-200/80 border-2 border-sky-300 text-sky-950 font-extrabold text-sm sm:text-base transition cursor-pointer flex items-center gap-2">
+          <span>💡</span><span id="hint-btn-label">Show Hint</span>
+        </button>
+
+        <button id="btn-reveal-answer" onclick="revealAnswer()" class="px-7 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-105 text-slate-950 font-black text-sm sm:text-base shadow-md transition cursor-pointer flex items-center gap-2">
+          <span>✨</span><span>Reveal Answer</span>
+        </button>
+      </div>
+
+      <!-- Answer & Breakdown Panel -->
+      <div id="modal-answer-box" class="hidden mb-7 p-5 sm:p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-inner animate-reveal">
+        <div class="text-xs font-black uppercase tracking-widest text-emerald-700 mb-1.5">✅ Answer</div>
+        <div id="modal-answer-text" class="text-xl sm:text-2xl font-extrabold text-slate-950 leading-snug mb-4"></div>
+
+        <div class="pt-4 border-t border-emerald-200">
+          <div class="text-xs font-black uppercase tracking-widest text-indigo-700 mb-1.5">🔍 Why / Pattern</div>
+          <div id="modal-breakdown-text" class="text-base sm:text-lg font-medium text-slate-800 leading-relaxed"></div>
+        </div>
+      </div>
+
+      <!-- Modal Footer Action Buttons -->
+      <div class="pt-5 border-t-2 border-amber-200/80 flex flex-wrap items-center justify-between gap-3">
+        <button onclick="unmarkAndClose()" class="px-5 py-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-slate-900 font-bold text-sm sm:text-base transition cursor-pointer">
+          Unmark / Close
+        </button>
+
+        <button onclick="markAnsweredAndClose()" class="px-6 py-3 rounded-xl bg-royalTile hover:bg-blue-800 text-amber-300 font-extrabold text-sm sm:text-base shadow-md transition cursor-pointer flex items-center gap-2">
+          <span>✓</span><span>Mark Answered &amp; Close</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CHEAT SHEET MODAL ==================== -->
+  <div id="cheatsheet-modal" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Cheat Sheet">
+    <div class="bg-warmCream text-slate-950 border-4 border-amber-400 rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl animate-modal my-auto max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between gap-3 pb-4 mb-5 border-b-2 border-amber-200/80">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">📖 <span class="greek-light">Μι</span>-Verb Cheat Sheet</h2>
+          <p class="text-sm text-slate-600 font-medium">3 Verbal Roots, Present &amp; Imperfect Endings &amp; 5-Tense Visual Spotting Guide</p>
+        </div>
+        <button onclick="closeCheatSheet()" class="w-10 h-10 rounded-full bg-amber-100 hover:bg-amber-200 text-slate-900 flex items-center justify-center font-black text-lg transition cursor-pointer" aria-label="Close cheat sheet">
+          ✕
+        </button>
+      </div>
+
+      <!-- 1. The 3 Verbal Roots -->
+      <div class="mb-6">
+        <h3 class="text-xs font-black uppercase tracking-widest text-royalTile mb-3">1. The 3 Verbal Roots</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="p-4 rounded-2xl bg-white border-2 border-amber-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="greek-light text-2xl">δίδωμι</div>
+              <div class="text-xs font-semibold text-slate-500">I give</div>
+            </div>
+            <span class="px-4 py-1.5 rounded-xl bg-royalTile text-amber-300 font-greek font-bold text-2xl">δο-</span>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white border-2 border-amber-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="greek-light text-2xl">τίθημι</div>
+              <div class="text-xs font-semibold text-slate-500">I place, put</div>
+            </div>
+            <span class="px-4 py-1.5 rounded-xl bg-royalTile text-amber-300 font-greek font-bold text-2xl">θε-</span>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white border-2 border-amber-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="greek-light text-2xl">ἵστημι</div>
+              <div class="text-xs font-semibold text-slate-500">I stand</div>
+            </div>
+            <span class="px-4 py-1.5 rounded-xl bg-royalTile text-amber-300 font-greek font-bold text-2xl">στα-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Present & Imperfect Active Endings of δίδωμι -->
+      <div class="mb-6">
+        <h3 class="text-xs font-black uppercase tracking-widest text-royalTile mb-3">2. Present &amp; Imperfect Active Endings of <span class="greek-light">δίδωμι</span></h3>
+        <div class="overflow-x-auto rounded-2xl border-2 border-royalTile/20 shadow-sm">
+          <table class="w-full text-left border-collapse min-w-[540px]">
+            <thead>
+              <tr class="bg-royalTile text-amber-300 text-xs uppercase tracking-wider">
+                <th class="p-3 font-extrabold">Person</th>
+                <th class="p-3 font-extrabold">Present Ending</th>
+                <th class="p-3 font-extrabold">Present Active</th>
+                <th class="p-3 font-extrabold">Imperfect Ending</th>
+                <th class="p-3 font-extrabold">Imperfect Active</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-amber-100 bg-white text-slate-950">
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">1S</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-μι</td>
+                <td class="p-2.5 font-greek text-xl font-bold">δίδωμι</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-ν</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδουν</td>
+              </tr>
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">2S</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-ς</td>
+                <td class="p-2.5 font-greek text-xl font-bold">δίδως</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-ς</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδους</td>
+              </tr>
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">3S</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-σι(ν)</td>
+                <td class="p-2.5 font-greek text-xl font-bold">δίδωσι(ν)</td>
+                <td class="p-2.5 text-sm font-semibold text-slate-500">— (none)</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδου</td>
+              </tr>
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">1P</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-μεν</td>
+                <td class="p-2.5 font-greek text-xl font-bold">δίδομεν</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-μεν</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδομεν</td>
+              </tr>
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">2P</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-τε</td>
+                <td class="p-2.5 font-greek text-xl font-bold">δίδοτε</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-τε</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδοτε</td>
+              </tr>
+              <tr class="hover:bg-amber-50/60">
+                <td class="p-2.5 font-extrabold text-xs uppercase tracking-wider text-slate-600">3P</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-ασι(ν)</td>
+                <td class="p-2.5 font-greek text-xl font-bold">διδόασι(ν)</td>
+                <td class="p-2.5 font-greek text-xl font-bold text-royalTile">-σαν</td>
+                <td class="p-2.5 font-greek text-xl font-bold">ἐδίδοσαν</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. The 5-Tense Visual Spotting Guide -->
+      <div>
+        <h3 class="text-xs font-black uppercase tracking-widest text-royalTile mb-3">3. The 5-Tense Visual Spotting Guide</h3>
+        <div class="grid grid-cols-1 gap-2.5 text-sm sm:text-base">
+          <div class="p-3.5 rounded-xl bg-white border border-amber-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span class="shrink-0 w-28 font-black text-royalTile uppercase text-xs tracking-wider">Present</span>
+            <span class="text-slate-800 font-medium"><span class="greek-light">ι</span>-redup (e.g., <span class="greek-light">δίδωμι</span>, <span class="greek-light">δίδοται</span>)</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-white border border-amber-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span class="shrink-0 w-28 font-black text-royalTile uppercase text-xs tracking-wider">Imperfect</span>
+            <span class="text-slate-800 font-medium"><span class="greek-light">ἐ-</span> + <span class="greek-light">ι</span>-redup (e.g., <span class="greek-light">ἐδίδουν</span>, <span class="greek-light">ἐδίδομεν</span>)</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-white border border-amber-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span class="shrink-0 w-28 font-black text-royalTile uppercase text-xs tracking-wider">Future</span>
+            <span class="text-slate-800 font-medium">no redup + <span class="greek-light">σ</span> (e.g., <span class="greek-light">δώσω</span>, <span class="greek-light">στήσω</span>)</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-white border border-amber-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span class="shrink-0 w-28 font-black text-royalTile uppercase text-xs tracking-wider">Aorist</span>
+            <span class="text-slate-800 font-medium"><span class="greek-light">ἐ-</span> + <span class="greek-light">κ</span>/<span class="greek-light">σ</span> (e.g., <span class="greek-light">ἔδωκα</span>, <span class="greek-light">ἔστησα</span>; passive <span class="greek-light">-θη</span>)</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-white border border-amber-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span class="shrink-0 w-28 font-black text-royalTile uppercase text-xs tracking-wider">Perfect</span>
+            <span class="text-slate-800 font-medium"><span class="greek-light">ε</span>-redup + <span class="greek-light">κ</span> (e.g., <span class="greek-light">δέδωκα</span>, <span class="greek-light">τέθεικα</span>; M/P <span class="greek-light">δέδοται</span>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TEACHER ANSWER KEY MODAL ==================== -->
+  <div id="answerkey-modal" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Teacher Answer Key">
+    <div id="answerkey-card" class="bg-warmCream text-slate-950 border-4 border-emerald-500 rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl animate-modal my-auto max-h-[92vh] overflow-y-auto">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-6 border-b-2 border-amber-200/80">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">🔑 Teacher Answer Key</h2>
+          <p class="text-sm text-slate-600 font-medium"><span class="greek-light">Μι</span>-Verb Confidence Jeopardy — All 20 Questions, Hints, Answers &amp; Breakdowns</p>
+        </div>
+        <div class="flex items-center gap-2 no-print">
+          <button onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-royalTile hover:bg-blue-800 text-amber-300 font-extrabold text-sm shadow-sm transition flex items-center gap-2 cursor-pointer">
+            <span>🖨️</span><span>Print Answer Key</span>
+          </button>
+          <button onclick="closeAnswerKey()" class="w-10 h-10 rounded-full bg-amber-100 hover:bg-amber-200 text-slate-900 flex items-center justify-center font-black text-lg transition cursor-pointer" aria-label="Close answer key">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamically populated from live boardCategories -->
+      <div id="answer-key-content" class="space-y-6"></div>
+    </div>
+  </div>
+
+  <!-- ==================== RESET CONFIRMATION MODAL ==================== -->
+  <div id="reset-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Reset Board Confirmation">
+    <div class="bg-warmCream text-slate-950 border-4 border-rose-400 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl animate-modal text-center">
+      <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center text-3xl font-bold">
+        ↺
+      </div>
+      <h3 class="text-xl font-extrabold text-slate-950 mb-2">Reset the Jeopardy Board?</h3>
+      <p class="text-sm text-slate-600 font-medium mb-6">All 20 tiles will be cleared so you can start a fresh round.</p>
+      <div class="flex items-center justify-center gap-3">
+        <button onclick="closeResetModal()" class="px-5 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-slate-900 font-bold text-sm transition cursor-pointer">
+          Cancel
+        </button>
+        <button onclick="confirmResetBoard()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm shadow-md transition cursor-pointer">
+          Yes, Reset Board
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION LOGIC ==================== -->
+  <script>
+    /* =========================================================================
+       1. WEB AUDIO API SOUND EFFECTS & TOGGLE
+       ========================================================================= */
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function getAudioContext() {
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function playTone(freq, duration, type = 'sine', volume = 0.12, delay = 0) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+
+      try {
+        const now = ctx.currentTime + delay;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(volume, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      } catch (err) {
+        // Ignore audio errors on restricted devices
+      }
+    }
+
+    const sfx = {
+      tileClick() {
+        playTone(523.25, 0.11, 'triangle', 0.12, 0);
+        playTone(659.25, 0.12, 'triangle', 0.1, 0.05);
+      },
+      hint() {
+        playTone(440, 0.12, 'sine', 0.1, 0);
+        playTone(554.37, 0.16, 'sine', 0.1, 0.07);
+      },
+      reveal() {
+        playTone(523.25, 0.12, 'triangle', 0.12, 0);
+        playTone(659.25, 0.12, 'triangle', 0.12, 0.08);
+        playTone(783.99, 0.22, 'triangle', 0.14, 0.16);
+      },
+      complete() {
+        playTone(523.25, 0.15, 'triangle', 0.14, 0);
+        playTone(659.25, 0.15, 'triangle', 0.14, 0.11);
+        playTone(783.99, 0.15, 'triangle', 0.14, 0.22);
+        playTone(1046.5, 0.35, 'triangle', 0.16, 0.33);
+      }
+    };
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+      document.getElementById('sound-label').textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      if (soundEnabled) {
+        sfx.tileClick();
+      }
+    }
+
+    /* =========================================================================
+       2. POLYTONIC GREEK FORMATTER
+       ========================================================================= */
+    function formatGreek(text, theme = 'light') {
+      if (!text) return '';
+      const cls = theme === 'dark' ? 'greek-dark' : 'greek-light';
+      // Escape basic HTML characters first
+      const escaped = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      // Wrap polytonic Greek words/stems (including optional leading/trailing hyphen or movable nu)
+      return escaped.replace(
+        /(-?[\u0370-\u03FF\u1F00-\u1FFF]+(?:\([\u0370-\u03FF\u1F00-\u1FFF]+\))?-?)/g,
+        `<span class="${cls}">$1</span>`
+      );
+    }
+
+    /* =========================================================================
+       3. EXACT 5×4 JEOPARDY BOARD DATA (20 Confidence-Building Questions)
+       ========================================================================= */
+    const boardCategories = [
+      {
+        title: 'Roots & Big Clues',
+        questions: [
+          {
+            value: '$100',
+            question: 'What are the three key μι verbs and their short verbal roots?',
+            hint: 'Drop the front reduplication and the -μι ending to find the core 2- or 3-letter root.',
+            answer: 'δίδωμι → δο-  |  τίθημι → θε-  |  ἵστημι → στα-',
+            breakdown: 'Almost every tense is built on these short roots—not the full lexical form!'
+          },
+          {
+            value: '$200',
+            question: 'You spot an iota reduplication at the front of a verb (like δι- or τι-). What two tenses could it be?',
+            hint: 'Check whether there is an augment (ἐ-) in front of it!',
+            answer: 'Present or Imperfect',
+            breakdown: 'No augment = Present (δίδωμι). Augment ἐ- in front = Imperfect (ἐδίδουν).'
+          },
+          {
+            value: '$300',
+            question: 'At a quick glance, how do you tell an Aorist (ἔδωκα) apart from a Perfect (δέδωκα)?',
+            hint: 'Look strictly at the very first syllable.',
+            answer: 'Aorist starts with an augment (ἐ-); Perfect starts with epsilon reduplication (δε-).',
+            breakdown: 'Both use a κ tense formative, so the front of the word is your instant giveaway!'
+          },
+          {
+            value: '$400',
+            question: 'Which tense of μι verbs appears most often in the New Testament—as much as all other tenses combined?',
+            hint: "Good news: it's one of the tenses that uses regular omega-verb endings!",
+            answer: 'The Aorist tense',
+            breakdown: 'Because aorist makes up over half of all μι-verb occurrences, recognizing the root + augment gives you massive reading power.'
+          }
+        ]
+      },
+      {
+        title: 'Present & Imperfect',
+        questions: [
+          {
+            value: '$100',
+            question: 'What are the three Present Active Singular endings for μι verbs (1S, 2S, 3S)?',
+            hint: 'Think of δίδω___, δίδω___, δίδω___.',
+            answer: '-μι, -ς, -σι(ν)',
+            breakdown: 'Example: δίδωμι (I give), δίδως (you give), δίδωσι(ν) (he/she/it gives). Notice the long vowel ω in the singular!'
+          },
+          {
+            value: '$200',
+            question: "Conjugate δίδωμι in the 1st Person Plural Present Active ('we give').",
+            hint: 'Keep the δι- reduplication, use the short vowel ο, and add -μεν.',
+            answer: 'δίδομεν',
+            breakdown: 'In the present active plural, the stem vowel stays short: δίδομεν, δίδοτε, διδόασι(ν).'
+          },
+          {
+            value: '$300',
+            question: "How do you turn Present δίδομεν ('we give') into Imperfect ('we were giving')?",
+            hint: 'You only need to add one single letter to the front!',
+            answer: 'Add the augment ἐ- → ἐδίδομεν',
+            breakdown: 'Imperfect plural forms look just like the present plural with an augment on front: ἐδίδομεν, ἐδίδοτε, ἐδίδοσαν.'
+          },
+          {
+            value: '$400',
+            question: 'Identify the tense, person, and number of: ἐδίδοσαν',
+            hint: 'Augment ἐ- + iota reduplication δι- + ending -σαν.',
+            answer: "Imperfect Active, 3rd Person Plural ('they were giving')",
+            breakdown: 'ἐ- (past augment) + δι- (present/imperfect stem) + δο- (root) + -σαν (3P ending).'
+          }
+        ]
+      },
+      {
+        title: 'Future, Aorist & Perfect',
+        questions: [
+          {
+            value: '$100',
+            question: 'Good news! In the Future, First Aorist, and Perfect tenses, what personal endings do μι verbs use?',
+            hint: 'Do you have to memorize a brand-new chart for these three tenses?',
+            answer: 'Regular omega-verb endings!',
+            breakdown: 'Μι verbs only act differently in the Present, Imperfect, and 2nd Aorist. Everything else uses the endings you already know.'
+          },
+          {
+            value: '$200',
+            question: "Build the Future Active 1S ('I will...') for all three key verbs: δίδωμι, τίθημι, and ἵστημι.",
+            hint: 'Drop the reduplication, lengthen the root vowel (δο → δω, θε → θη, στα → στη), and add -σω.',
+            answer: 'δώσω, θήσω, στήσω',
+            breakdown: 'Super clean and predictable: root with long vowel + regular future -σω.'
+          },
+          {
+            value: '$300',
+            question: "Using ἔδωκα ('I gave'), conjugate the 1st Plural ('we gave') and 3rd Plural ('they gave').",
+            hint: 'Use regular first-aorist endings (-αμεν, -αν) with the κ.',
+            answer: 'ἐδώκαμεν (1P) and ἔδωκαν (3P)',
+            breakdown: 'First aorist μι verbs just swap the normal σ for a κ, then follow regular first-aorist endings!'
+          },
+          {
+            value: '$400',
+            question: "Turn Aorist ἔδωκας ('you gave') into Perfect Active 2S ('you have given').",
+            hint: 'Swap the front augment for epsilon reduplication.',
+            answer: 'δέδωκας',
+            breakdown: 'ἐ- (augment) becomes δε- (epsilon reduplication). The rest of the word (-δωκας) stays identical!'
+          }
+        ]
+      },
+      {
+        title: 'Spot the Tense!',
+        questions: [
+          {
+            value: '$100',
+            question: 'What tense is δώσει, and what is the giveaway?',
+            hint: 'No reduplication, no augment—look right before the -ει.',
+            answer: "Future Active (3S: 'he/she will give')",
+            breakdown: 'Root δω- + σ tense formative + regular -ει ending.'
+          },
+          {
+            value: '$200',
+            question: 'What tense and voice is δίδοται?',
+            hint: 'Look at the δι- at the front and -ται at the end.',
+            answer: 'Present Middle/Passive (3S)',
+            breakdown: 'Iota reduplication (δι-) with no augment = Present. Short vowel ο + -ται = Middle/Passive.'
+          },
+          {
+            value: '$300',
+            question: 'What tense and voice is ἐδόθη?',
+            hint: 'Spot the augment ἐ- at the front and the -θη- near the end.',
+            answer: 'Aorist Passive (3S)',
+            breakdown: 'Augment ἐ- + root δο- + passive marker -θη = classic Aorist Passive.'
+          },
+          {
+            value: '$400',
+            question: 'What tense and voice is δέδοται?',
+            hint: 'Compare the front syllable to δίδοται!',
+            answer: 'Perfect Middle/Passive (3S)',
+            breakdown: 'Epsilon reduplication (δε-) = Perfect; root δο- + -ται = Middle/Passive.'
+          }
+        ]
+      },
+      {
+        title: 'Rapid Recognition',
+        questions: [
+          {
+            value: '$100',
+            question: 'Identify the tense, person, and number of: διδόασιν',
+            hint: 'Iota reduplication at the front, -ασιν at the end.',
+            answer: "Present Active, 3rd Person Plural ('they give')",
+            breakdown: 'δι- (Present) + δο- (short root vowel) + -ασιν (3P active ending).'
+          },
+          {
+            value: '$200',
+            question: 'What tense and voice is δοθήσεται?',
+            hint: 'No augment, but you see BOTH -θη- and -σ-!',
+            answer: "Future Passive (3S: 'it will be given')",
+            breakdown: 'No augment + -θη- (passive) + σ (future) + -εται (3S passive ending).'
+          },
+          {
+            value: '$300',
+            question: 'Compare ἔθηκα and τέθεικα. Which one is Aorist and which one is Perfect?',
+            hint: 'Augment vs. epsilon reduplication!',
+            answer: 'ἔθηκα = Aorist Active  |  τέθεικα = Perfect Active',
+            breakdown: "ἐ- at the front = Aorist ('I placed'). τε- reduplication at the front = Perfect ('I have placed')."
+          },
+          {
+            value: '$400',
+            question: 'Name all three tenses in order: στήσω  •  ἔστησα  •  ἕστηκα',
+            hint: 'Check for σ without augment, augment + σ, and rough-breathing epsilon reduplication + κ.',
+            answer: 'Future (στήσω)  •  Aorist (ἔστησα)  •  Perfect (ἕστηκα)',
+            breakdown: 'All three are built on the root στα- (lengthened to στη-) of ἵστημι!'
+          }
+        ]
+      }
+    ];
+
+    /* =========================================================================
+       4. BOARD STATE & RENDERING
+       ========================================================================= */
+    const TOTAL_TILES = 20;
+    let answeredTiles = new Set();
+    let activeTile = null;
+    let answerRevealed = false;
+    let celebratedCompletion = false;
+
+    function renderBoard() {
+      const board = document.getElementById('jeopardy-board');
+      let html = '';
+
+      // 5 Category Header Cells
+      boardCategories.forEach(cat => {
+        html += `
+          <div class="px-3 py-4 rounded-2xl bg-slate-900/95 border-2 border-amber-400/60 shadow-md flex items-center justify-center text-center min-h-[70px]">
+            <span class="font-black text-xs sm:text-sm md:text-base uppercase tracking-wider text-amber-300 leading-tight">
+              ${cat.title}
+            </span>
+          </div>
+        `;
+      });
+
+      // 4 Rows ($100, $200, $300, $400)
+      for (let row = 0; row < 4; row++) {
+        boardCategories.forEach((cat, col) => {
+          const q = cat.questions[row];
+          const key = `${col}-${row}`;
+          const isAnswered = answeredTiles.has(key);
+
+          html += `
+            <button
+              onclick="openQuestionModal(${col}, ${row})"
+              class="jeopardy-tile ${isAnswered ? 'tile-answered' : ''} rounded-2xl p-3 flex flex-col items-center justify-center cursor-pointer min-h-[86px]"
+              aria-label="${cat.title} for ${q.value}${isAnswered ? ' (Answered)' : ''}"
+            >
+              <span class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight ${isAnswered ? 'text-slate-500 line-through' : 'text-amber-300 drop-shadow'}">
+                ${q.value}
+              </span>
+              ${isAnswered ? '<span class="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-extrabold uppercase tracking-wider">✓ Answered</span>' : ''}
+            </button>
+          `;
+        });
+      }
+
+      board.innerHTML = html;
+
+      // Update Progress Counter
+      document.getElementById('progress-counter').textContent = `${answeredTiles.size} / ${TOTAL_TILES} Answered`;
+
+      // Completion Banner & Confetti
+      const banner = document.getElementById('completion-banner');
+      if (answeredTiles.size === TOTAL_TILES) {
+        banner.classList.remove('hidden');
+        if (!celebratedCompletion) {
+          celebratedCompletion = true;
+          sfx.complete();
+          launchConfetti();
+        }
+      } else {
+        banner.classList.add('hidden');
+        celebratedCompletion = false;
+      }
+    }
+
+    /* =========================================================================
+       5. QUESTION MODAL INTERACTIONS
+       ========================================================================= */
+    function openQuestionModal(col, row) {
+      const cat = boardCategories[col];
+      const q = cat.questions[row];
+      const key = `${col}-${row}`;
+      const isAlreadyAnswered = answeredTiles.has(key);
+
+      activeTile = { col, row, key };
+      answerRevealed = false;
+      sfx.tileClick();
+
+      document.getElementById('modal-category').textContent = cat.title;
+      document.getElementById('modal-value').textContent = q.value;
+      document.getElementById('modal-question-text').innerHTML = formatGreek(q.question, 'light');
+      document.getElementById('modal-hint-text').innerHTML = formatGreek(q.hint, 'light');
+      document.getElementById('modal-answer-text').innerHTML = formatGreek(q.answer, 'light');
+      document.getElementById('modal-breakdown-text').innerHTML = formatGreek(q.breakdown, 'light');
+
+      // Reset hint & answer visibility
+      document.getElementById('modal-hint-box').classList.add('hidden');
+      document.getElementById('hint-btn-label').textContent = 'Show Hint';
+      document.getElementById('modal-answer-box').classList.add('hidden');
+      document.getElementById('modal-answered-badge').classList.toggle('hidden', !isAlreadyAnswered);
+
+      // If re-opening an answered tile, reveal the answer immediately for quick review
+      if (isAlreadyAnswered) {
+        document.getElementById('modal-answer-box').classList.remove('hidden');
+        answerRevealed = true;
+      }
+
+      document.getElementById('question-modal').classList.remove('hidden');
+    }
+
+    function toggleHint() {
+      const box = document.getElementById('modal-hint-box');
+      const label = document.getElementById('hint-btn-label');
+      const isHidden = box.classList.toggle('hidden');
+      label.textContent = isHidden ? 'Show Hint' : 'Hide Hint';
+      sfx.hint();
+    }
+
+    function revealAnswer() {
+      const box = document.getElementById('modal-answer-box');
+      if (box.classList.contains('hidden')) {
+        box.classList.remove('hidden');
+        answerRevealed = true;
+        sfx.reveal();
+      }
+    }
+
+    function markAnsweredAndClose() {
+      if (!activeTile) return;
+      answeredTiles.add(activeTile.key);
+      sfx.tileClick();
+      closeQuestionModal();
+      renderBoard();
+    }
+
+    function unmarkAndClose() {
+      if (activeTile) {
+        answeredTiles.delete(activeTile.key);
+      }
+      closeQuestionModal();
+      renderBoard();
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('question-modal').classList.add('hidden');
+      activeTile = null;
+    }
+
+    /* =========================================================================
+       6. CHEAT SHEET, ANSWER KEY & RESET MODALS
+       ========================================================================= */
+    function openCheatSheet() {
+      sfx.tileClick();
+      document.getElementById('cheatsheet-modal').classList.remove('hidden');
+    }
+
+    function closeCheatSheet() {
+      document.getElementById('cheatsheet-modal').classList.add('hidden');
+    }
+
+    function renderAnswerKey() {
+      const container = document.getElementById('answer-key-content');
+      container.innerHTML = boardCategories.map((cat, idx) => `
+        <section class="rounded-2xl border-2 border-amber-200 bg-white overflow-hidden shadow-sm">
+          <div class="bg-royalTile text-amber-300 px-4 py-2.5 font-extrabold text-sm uppercase tracking-wider">
+            Category ${idx + 1}: ${cat.title}
+          </div>
+          <div class="divide-y divide-amber-100">
+            ${cat.questions.map(q => `
+              <div class="p-4 print-break-avoid">
+                <div class="flex items-start gap-3 mb-1.5">
+                  <span class="shrink-0 px-2.5 py-0.5 rounded-lg bg-amber-200 text-slate-950 font-black text-xs">${q.value}</span>
+                  <div class="font-bold text-slate-950 text-sm sm:text-base leading-snug">${formatGreek(q.question, 'light')}</div>
+                </div>
+                <div class="pl-0 sm:pl-14 space-y-1 text-sm">
+                  <div class="text-sky-800"><span class="font-extrabold">Hint:</span> ${formatGreek(q.hint, 'light')}</div>
+                  <div class="text-emerald-800"><span class="font-extrabold">Answer:</span> <span class="font-bold text-slate-950">${formatGreek(q.answer, 'light')}</span></div>
+                  <div class="text-slate-600"><span class="font-extrabold text-indigo-700">Why / Pattern:</span> ${formatGreek(q.breakdown, 'light')}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      `).join('');
+    }
+
+    function openAnswerKey() {
+      sfx.tileClick();
+      renderAnswerKey();
+      document.getElementById('answerkey-modal').classList.remove('hidden');
+    }
+
+    function closeAnswerKey() {
+      document.getElementById('answerkey-modal').classList.add('hidden');
+    }
+
+    function openResetModal() {
+      sfx.tileClick();
+      document.getElementById('reset-modal').classList.remove('hidden');
+    }
+
+    function closeResetModal() {
+      document.getElementById('reset-modal').classList.add('hidden');
+    }
+
+    function confirmResetBoard() {
+      answeredTiles.clear();
+      celebratedCompletion = false;
+      closeResetModal();
+      renderBoard();
+      sfx.reveal();
+    }
+
+    /* =========================================================================
+       7. KEYBOARD SHORTCUTS (Space / Enter = Reveal, Esc = Close)
+       ========================================================================= */
+    document.addEventListener('keydown', e => {
+      const qOpen = !document.getElementById('question-modal').classList.contains('hidden');
+      const cheatOpen = !document.getElementById('cheatsheet-modal').classList.contains('hidden');
+      const answerKeyOpen = !document.getElementById('answerkey-modal').classList.contains('hidden');
+      const resetOpen = !document.getElementById('reset-modal').classList.contains('hidden');
+
+      if (e.key === 'Escape') {
+        if (qOpen) closeQuestionModal();
+        if (cheatOpen) closeCheatSheet();
+        if (answerKeyOpen) closeAnswerKey();
+        if (resetOpen) closeResetModal();
+        return;
+      }
+
+      if (qOpen && (e.code === 'Space' || e.key === 'Enter')) {
+        if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+          return;
+        }
+        e.preventDefault();
+        if (!answerRevealed) {
+          revealAnswer();
+        }
+      }
+    });
+
+    /* =========================================================================
+       8. CONFETTI BURST ANIMATION (Canvas)
+       ========================================================================= */
+    let confettiParticles = [];
+    let confettiFrameId = null;
+
+    function resizeConfettiCanvas() {
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      resizeConfettiCanvas();
+      const colors = ['#fbbf24', '#f59e0b', '#34d399', '#60a5fa', '#f472b6', '#ffffff'];
+
+      confettiParticles = Array.from({ length: 140 }, () => ({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * 240,
+        w: 7 + Math.random() * 7,
+        h: 5 + Math.random() * 6,
+        vx: (Math.random() - 0.5) * 4.5,
+        vy: 3 + Math.random() * 4.5,
+        rot: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 0.22,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        opacity: 1
+      }));
+
+      if (confettiFrameId) cancelAnimationFrame(confettiFrameId);
+      animateConfetti();
+    }
+
+    function animateConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let alive = 0;
+      confettiParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.045;
+        p.rot += p.vRot;
+
+        if (p.y > canvas.height * 0.8) {
+          p.opacity = Math.max(0, p.opacity - 0.025);
+        }
+
+        if (p.opacity > 0 && p.y < canvas.height + 30) {
+          alive++;
+          ctx.save();
+          ctx.globalAlpha = p.opacity;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        }
+      });
+
+      if (alive > 0) {
+        confettiFrameId = requestAnimationFrame(animateConfetti);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        confettiFrameId = null;
+      }
+    }
+
+    /* =========================================================================
+       9. INITIALIZATION
+       ========================================================================= */
+    window.addEventListener('resize', resizeConfettiCanvas);
+    window.onload = function () {
+      resizeConfettiCanvas();
+      renderBoard();
+    };
+  </script>
+</body>
+</html>
